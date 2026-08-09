@@ -72,20 +72,23 @@ def fused_ce_fwd_kernel(
             acc += tl.dot(x.to(tl.float32), tl.trans(w).to(tl.float32))
             w_block_ptr.advance((0, D_TILE_SIZE))
 
-        # 对于无效的 v 位置，acc 为 0，它们不影响 local_max，但为了安全强制屏蔽
-        acc = tl.where(v_mask[None, :], acc, -float('inf'))  # 求 max 时忽略无效位
-        local_max = tl.max(acc, axis=1)
-        local_sum = tl.sum(tl.exp(acc - local_max[:, None]), axis=1)
+        # 用 masked_acc 安全计算 max/sum，避免 -inf 污染原始 acc
+        masked_acc = tl.where(v_mask[None, :], acc, -float('inf'))
+        local_max = tl.max(masked_acc, axis=1)
+        local_sum = tl.sum(tl.exp(masked_acc - local_max[:, None]), axis=1)
 
         old_max = global_max
         global_max = tl.maximum(global_max, local_max)
         global_sum = (global_sum * tl.exp(old_max - global_max) +
                       local_sum * tl.exp(local_max - global_max))
 
+        # 使用 tl.gather 提取标签对应的 logit
         label_mask = (labels >= v_start) & (labels < v_start + V_TILE_SIZE)
         label_offset = labels - v_start
-        oh_mask = (tl.arange(0, V_TILE_SIZE)[None, :] == label_offset[:, None])
-        gathered = tl.sum(acc * oh_mask, axis=1)
+        safe_off = tl.where(label_mask, label_offset, 0)
+        indices_2d = safe_off[:, None]                # [TILE, 1]
+        gathered = tl.gather(acc, indices_2d, axis=1) # [TILE, 1]
+        gathered = tl.reshape(gathered, [TOKEN_TILE_SIZE])  # [TILE]
         label_logit = tl.where(label_mask, gathered, label_logit)
 
     # 分块 logsumexp
