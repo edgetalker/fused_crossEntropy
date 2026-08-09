@@ -82,13 +82,10 @@ def fused_ce_fwd_kernel(
         global_sum = (global_sum * tl.exp(old_max - global_max) +
                       local_sum * tl.exp(local_max - global_max))
 
-        # 收集标签对应的 logit
         label_mask = (labels >= v_start) & (labels < v_start + V_TILE_SIZE)
         label_offset = labels - v_start
-        # 保护 gather 不越界
-        safe_offset = tl.where(label_mask, label_offset, 0)
-        # gather 结果形状为 [TOKEN_TILE_SIZE, 1]，需要挤压成 1D
-        gathered = tl.gather(acc, safe_offset[:, None], axis=1)[:, 0]
+        oh_mask = (tl.arange(0, V_TILE_SIZE)[None, :] == label_offset[:, None])
+        gathered = tl.sum(acc * oh_mask, axis=1)
         label_logit = tl.where(label_mask, gathered, label_logit)
 
     # 分块 logsumexp
@@ -307,7 +304,7 @@ class FusedLinearCrossEntropy(torch.autograd.Function):
         fused_ce_fwd_kernel[grid](
             hidden, weight, labels,
             loss_per_token, max_vals, sum_vals,
-            hidden.stride(0), hidden.stride(1), hidden.stride(2),
+            hidden.stride(0), hidden.stride(1), 
             weight.stride(0), weight.stride(1),
             labels.stride(0), labels.stride(1),
             B, S, D, V,
@@ -335,7 +332,7 @@ class FusedLinearCrossEntropy(torch.autograd.Function):
             grad_scale,
             hidden, weight, labels, max_vals, sum_vals,
             dhidden,
-            hidden.stride(0), hidden.stride(1), hidden.stride(2),
+            hidden.stride(0), hidden.stride(1),
             weight.stride(0), weight.stride(1),
             labels.stride(0), labels.stride(1),
             B, S, D, V,
@@ -351,7 +348,7 @@ class FusedLinearCrossEntropy(torch.autograd.Function):
             grad_scale,
             hidden, weight, labels, max_vals, sum_vals,
             dweight,
-            hidden.stride(0), hidden.stride(1), hidden.stride(2),
+            hidden.stride(0), hidden.stride(1),
             weight.stride(0), weight.stride(1),
             labels.stride(0), labels.stride(1),
             B, S, D, V,

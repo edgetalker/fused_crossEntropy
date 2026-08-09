@@ -33,3 +33,62 @@ $$
 $$
 \frac{\partial L}{\partial W_{jd}} = \sum_{i=0}^{N-1}\frac{\partial L}{\partial z_{ij}}h_{id}=\frac{1}{N}\sum^{N-1}_{i=0}(p_i-e_{y_i})h_i^\text T
 $$
+
+### Benchmark
+```
+===== B=1, S=1024, D=768, V=32000 =====
+  Standard peak memory : 363.78 MB
+  Manual   peak memory : 491.80 MB
+  Fused    peak memory : 113.79 MB
+  Reduction vs standard : 3.2x
+  Reduction vs manual   : 4.3x
+
+===== B=2, S=1024, D=768, V=32000 =====
+  Standard peak memory : 616.04 MB
+  Manual   peak memory : 866.07 MB
+  Fused    peak memory : 116.06 MB
+  Reduction vs standard : 5.3x
+  Reduction vs manual   : 7.5x
+
+===== B=4, S=1024, D=768, V=32000 =====
+  Standard peak memory : 1122.05 MB
+  Manual   peak memory : 1622.13 MB
+  Fused    peak memory : 122.10 MB
+  Reduction vs standard : 9.2x
+  Reduction vs manual   : 13.3x
+
+===== B=1, S=1024, D=4096, V=32000 =====
+  Standard peak memory : 784.28 MB
+  Manual   peak memory : 910.30 MB
+  Fused    peak memory : 532.29 MB
+  Reduction vs standard : 1.5x
+  Reduction vs manual   : 1.7x
+
+===== B=2, S=1024, D=4096, V=32000 =====
+  Standard peak memory : 1048.29 MB
+  Manual   peak memory : 1298.32 MB
+  Fused    peak memory : 548.31 MB
+  Reduction vs standard : 1.9x
+  Reduction vs manual   : 2.4x
+
+===== B=4, S=1024, D=4096, V=32000 =====
+  Standard peak memory : 1580.30 MB
+  Manual   peak memory : 2080.38 MB
+  Fused    peak memory : 580.35 MB
+  Reduction vs standard : 2.7x
+  Reduction vs manual   : 3.6x
+
+===== B=1, S=1024, D=8192, V=32000 =====
+  Standard peak memory : 1298.28 MB
+  Manual   peak memory : 1426.30 MB
+  Fused    peak memory : 1048.29 MB
+  Reduction vs standard : 1.2x
+  Reduction vs manual   : 1.4x
+
+===== B=2, S=1024, D=8192, V=32000 =====
+  Standard peak memory : 1580.29 MB
+  Manual   peak memory : 1830.32 MB
+  Fused    peak memory : 1080.31 MB
+  Reduction vs standard : 1.5x
+  Reduction vs manual   : 1.7x
+```
